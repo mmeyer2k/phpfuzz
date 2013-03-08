@@ -70,7 +70,6 @@ function phpfuzz(){
             keyStr.charAt(enc2) +
             keyStr.charAt(enc3) +
             keyStr.charAt(enc4);
-        console.log(output);
             chr1 = chr2 = chr3 = enc1 = enc2 = enc3 = enc4 = "";
         } while (i < input.length);
         

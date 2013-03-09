@@ -2,7 +2,8 @@ function phpfuzz(){
     this.iterations = 2; // specify number of rounds
     this.fuzz_tampers = false; // specify whether tamper strings will be inserted on each iteration
     this.fuzz_strings = false; //
-    this.fuss_numbers = false; //
+    this.fuzz_numbers = false; //
+    this.fuzz_mask_unpackers = false;
     
     this.shuffle = function(o){
         for(var j, x, i = o.length; i; j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
@@ -14,6 +15,8 @@ function phpfuzz(){
     '/*eval("*/', 
     '/*base64_decode("*/',
     '/*base64_decode"*/',
+    '/**/',
+    '/***/',
     '/**-/*\\/*-----*///\'(*/'
     ];
     
@@ -44,15 +47,34 @@ function phpfuzz(){
     
     this.iteration = function (code){
         code = this.tamper(code);
+        
+        //if (this.fuzz_mask_unpackers){
+        //    var fn = '$_____bd' + Math.floor(Math.random() * 10000000001);
+        //    var bd = "String.fromCharCode(98)+String.fromCharCode(97)+"; // ba
+        //    bd += "String.fromCharCode(97)+String.fromCharCode(108)"; //se
+        //    bd += "String.fromCharCode(54)+String.fromCharCode(52)"; //64
+        //    bd += "String.fromCharCode(95)+String.fromCharCode(100)"; //_d
+        //    bd += "String.fromCharCode(108)+Strsing.fromCharCode(99)"; //ec
+        //    bd += "String.fromCharCode(111)+String.fromCharCode(100)"; //od
+        //    bd += "String.fromCharCode(108)"; //e
+        //    return fn + '=' + bd + ';' + fn + '(' + code + ');';
+        //} else {
         return this.evalwrap("base64_decode('" + this.encode64(code) + "')");
+    //}
     }
+    
     this.evalwrap = function (code){
-        var fn = '$_____e' + Math.floor(Math.random() * 10000000001);
-        // print out a string of functions that evaluates to 'eval'
-        // ascii 101 118 97 108
-        var eval = "String.fromCharCode(101)+String.fromCharCode(118)+ ";
-        eval += "String.fromCharCode(97)+String.fromCharCode(108)";
-        return fn + '=' + eval + ';' + fn + '(' + code + ');';
+        if (this.fuzz_mask_unpackers){
+            var fn = '$_____e' + Math.floor(Math.random() * 10000000001);
+            // print out a string of functions that evaluates to 'eval'
+            // ascii 101 118 97 108
+            var eval = "String.fromCharCode(101)+String.fromCharCode(118)+"; // ev
+            eval += "String.fromCharCode(97)+String.fromCharCode(108)"; //al
+            return fn + '=' + eval + ';' + fn + '(' + code + ');';
+        } else {
+            return 'eval(' + code + ');';
+        }
+
     }
     this.phpwrap = function (code){
         return '<?php ' + code + ' ?>';
@@ -78,8 +100,9 @@ function phpfuzz(){
     
     this.trim = function trim(s) {
         if (s){
-            return s.replace(/^\s+|\s+$/g,"");
+            s = s.replace(/^\s+|\s+$/g, "");
         }
+        return s;
     }
     
     this.encode64  = function (input) {

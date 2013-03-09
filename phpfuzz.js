@@ -1,14 +1,26 @@
 function phpfuzz(){
-    this.iterations = 2;
-    this.output_phpwrap = true;
-    this.enable_string_obfuscation = true;
-    this.enable_tamper_profing = true;
-    this.tamper_strings = ['/* eval ( */', '/* *-* --- --*///\' ( */'];
+    this.iterations = 2; // specify number of rounds
+    this.fuzz_tampers = false; // specify whether tamper strings will be inserted on each iteration
+    this.fuzz_strings = false; //
+    this.fuss_numbers = false; //
+    
+    this.shuffle = function(o){
+        for(var j, x, i = o.length; i; j = parseInt(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+        return o;
+    }
+    
+    // list of tamper strings to insert randomly which fool deobfuscators
+    this.tamper_strings = [
+    '/* eval("*/', 
+    '/* base64_decode("*/',
+    '/* *-/*\\ /*--- --*///\' ( */'
+    ];
+    
     this.obf_table = [];
     
     this.obfuscate = function (code){
         if (code) {
-            var chunks = code.match(/<\?php.*?>/g);
+            var chunks = code.match(/<\?php(.*)\?>/g);
             for (var chunk in chunks){
                 var original = chunks[chunk];
                 chunks[chunk] = this.trim(this.phpstrip(chunks[chunk]));
@@ -20,7 +32,17 @@ function phpfuzz(){
         }
         return code;
     }
+    
+    this.tamper = function (code){
+        if (this.fuzz_tampers){
+            this.tamper_strings = this.shuffle(this.tamper_strings);
+            code = this.tamper_strings[0] + code;
+        }
+        return code;
+    }
+    
     this.iteration = function (code){
+        //code = this.tamper(code);
         return this.evalwrap("base64_decode('" + this.encode64(code) + "')");
     }
     this.evalwrap = function (code){

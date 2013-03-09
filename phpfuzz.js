@@ -11,16 +11,17 @@ function phpfuzz(){
     
     // list of tamper strings to insert randomly which fool deobfuscators
     this.tamper_strings = [
-    '/* eval("*/', 
-    '/* base64_decode("*/',
-    '/* *-/*\\ /*--- --*///\' ( */'
+    '/*eval("*/', 
+    '/*base64_decode("*/',
+    '/*base64_decode"*/',
+    '/**-/*\\/*-----*///\'(*/'
     ];
     
     this.obf_table = [];
     
     this.obfuscate = function (code){
         if (code) {
-            var chunks = code.match(/<\?php(.*)\?>/g);
+            var chunks = code.match(/<\?php?(.*[\s\S])*?\?>/g);
             for (var chunk in chunks){
                 var original = chunks[chunk];
                 chunks[chunk] = this.trim(this.phpstrip(chunks[chunk]));
@@ -42,18 +43,33 @@ function phpfuzz(){
     }
     
     this.iteration = function (code){
-        //code = this.tamper(code);
+        code = this.tamper(code);
         return this.evalwrap("base64_decode('" + this.encode64(code) + "')");
     }
     this.evalwrap = function (code){
-        return 'eval(' + code + ');';
+        var fn = '$_____e' + Math.floor(Math.random() * 10000000001);
+        // print out a string of functions that evaluates to 'eval'
+        // ascii 101 118 97 108
+        var eval = "String.fromCharCode(101)+String.fromCharCode(118)+ ";
+        eval += "String.fromCharCode(97)+String.fromCharCode(108)";
+        return fn + '=' + eval + ';' + fn + '(' + code + ');';
     }
     this.phpwrap = function (code){
         return '<?php ' + code + ' ?>';
     }
+    
+    
     this.phpstrip = function (code){
-        code = code.replace('?>', '');
-        return code.replace('<?php', '');
+        code = this.trim(code);
+        
+        if (typeof code !== "string")
+            return false;
+        
+        if (code){
+            code = code.replace('?>', '');
+            return code.replace('<?php', '');
+        }
+        return code;
     }
     
     this.addslashes = function (code){
@@ -61,10 +77,15 @@ function phpfuzz(){
     }
     
     this.trim = function trim(s) {
-        return s.replace(/^\s+|\s+$/g,"");
+        if (s){
+            return s.replace(/^\s+|\s+$/g,"");
+        }
     }
     
     this.encode64  = function (input) {
+        if (!input){
+            return false;
+        }
         var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
         //input = escape(input);
         var output = "";
